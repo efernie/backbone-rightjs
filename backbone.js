@@ -526,11 +526,12 @@ var rightJS_window = $(window);
       options || (options = {});
       var collection = this;
       var success = options.success;
-      options.success = function(resp, status, xhr) {
-        collection[options.add ? 'add' : 'reset'](collection.parse(resp, xhr), options);
+      options.onSuccess = function(resp, status, xhr) {
+        collection[options.add ? 'add' : 'reset'](collection.parse(resp.responseJSON, xhr), options);
         if (success) success(collection, resp);
       };
-      options.error = wrapError(options.error, collection, options);
+      options.onError = wrapError(options.error, collection, options);
+      console.log(this,options);
       return (this.sync || Backbone.sync).call(this, 'read', this, options);
     },
 
@@ -767,7 +768,7 @@ var rightJS_window = $(window);
         } else {
           /**
             * 
-            * CHANGE!!!!!!!!!!!!!! (from window to root)
+            * CHANGED!!!!!!!!!!!!!! (from window to root)
             *
             */
           fragment = root.location.hash;
@@ -792,6 +793,9 @@ var rightJS_window = $(window);
       var docMode = document.documentMode;
       var oldIE = (isExplorer.exec(navigator.userAgent.toLowerCase()) && (!docMode || docMode <= 7));
       if (oldIE) {
+        /*
+         * change this!!!! to work with right
+         */
         this.iframe = $('<iframe src="javascript:0" tabindex="-1" />').hide().appendTo('body')[0].contentWindow;
         this.navigate(fragment);
       }
@@ -799,7 +803,7 @@ var rightJS_window = $(window);
       // Depending on whether we're using pushState or hashes, and whether
       // 'onhashchange' is supported, determine how we check the URL state.
       if (this._hasPushState) {
-        $(window).bind('popstate', this.checkUrl);
+        rightJS_window.on('popstate', this.checkUrl);
       } else if ('onhashchange' in window && !oldIE) {
         rightJS_window.on('hashchange', this.checkUrl);
       } else {
@@ -976,6 +980,9 @@ var rightJS_window = $(window);
         if (selector === '') {
           $(this.el).bind(eventName, method);
         } else {
+          /*
+           *change this!!!!
+           */
           $(this.el).delegate(selector, eventName, method);
         }
       }
@@ -1055,6 +1062,21 @@ var rightJS_window = $(window);
       dataType: 'json'
     }, options);
 
+    var params2 = _.extend({
+      method: type,
+    }, options);
+
+    var rightoptions = {
+        method : type,
+        onSuccess : function(data){
+          //console.log(data.responseJSON);
+          return data.responseJSON;
+        },
+        onFailure : function(data){
+          console.log('failure',data)
+        }
+    };
+
     // Ensure that we have a URL.
     if (!params.url) {
       params.url = getUrl(model) || urlError();
@@ -1090,9 +1112,13 @@ var rightJS_window = $(window);
     if (params.type !== 'GET' && !Backbone.emulateJSON) {
       params.processData = false;
     }
-    console.log(params)
+    console.log('backparams',params);
     // Make the request.
-    return $.ajax(params);
+    /*
+     * change this!!!
+     */
+    return Xhr.load(params.url,params2);
+    //return $.ajax(params);
   };
 
   // Helpers
