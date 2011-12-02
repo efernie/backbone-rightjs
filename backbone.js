@@ -3,21 +3,14 @@
 //     Backbone may be freely distributed under the MIT license.
 //     For all details and documentation:
 //     http://documentcloud.github.com/backbone
-console.log('before backbone',$(window));
+
 var rightJS_window = $(window);
-console.log('right before: ',rightJS_window);
-//(function(window,document) {
-//(function(rightJS_window) {
+
 (function() {
-  console.log('document: ',document);
-  console.log('window: ',window);
-  console.log('this.locaiton.hash: ',this.location.hash);
-  console.log('right after: ',rightJS_window);
   // Initial Setup
   // -------------
   // Save a reference to the global object.
   var root = this;
-  console.log('root: ',root)
   // Save the previous value of the `Backbone` variable.
   var previousBackbone = root.Backbone;
 
@@ -38,8 +31,8 @@ console.log('right before: ',rightJS_window);
   if (!_ && (typeof require !== 'undefined')) _ = require('underscore')._;
 
   // For Backbone's purposes, jQuery or Zepto owns the `$` variable.
-  var $ = root.jQuery || root.RightJS;
-  console.log('root.RightJS',$)
+  var $ = root.RightJS;
+
   // Runs Backbone.js in *noConflict* mode, returning the `Backbone` variable
   // to its previous owner. Returns a reference to this Backbone object.
   Backbone.noConflict = function() {
@@ -796,7 +789,6 @@ console.log('right before: ',rightJS_window);
       this._wantsPushState = !! this.options.pushState;
       this._hasPushState = !! (this.options.pushState && window.history && window.history.pushState);
       var fragment = this.getFragment();
-      console.log('795',document);
       var docMode = document.documentMode;
       var oldIE = (isExplorer.exec(navigator.userAgent.toLowerCase()) && (!docMode || docMode <= 7));
       if (oldIE) {
@@ -806,13 +798,9 @@ console.log('right before: ',rightJS_window);
 
       // Depending on whether we're using pushState or hashes, and whether
       // 'onhashchange' is supported, determine how we check the URL state.
-      console.log('window above',window)
       if (this._hasPushState) {
         $(window).bind('popstate', this.checkUrl);
       } else if ('onhashchange' in window && !oldIE) {
-        console.log($(window))
-        console.log(this)
-
         rightJS_window.on('hashchange', this.checkUrl);
       } else {
         setInterval(this.checkUrl, this.interval);
@@ -1102,7 +1090,7 @@ console.log('right before: ',rightJS_window);
     if (params.type !== 'GET' && !Backbone.emulateJSON) {
       params.processData = false;
     }
-
+    console.log(params)
     // Make the request.
     return $.ajax(params);
   };
