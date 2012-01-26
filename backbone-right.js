@@ -282,11 +282,11 @@ var rightJS_window = $(window);
       options || (options = {});
       var model = this;
       var success = options.success;
-      options.success = function(resp, status, xhr) {
-        if (!model.set(model.parse(resp, xhr), options)) return false;
+      options.onSuccess = function(resp, status, xhr) {
+        if (!model.set(model.parse(resp.responseJSON, xhr), options)) return false;
         if (success) success(model, resp);
       };
-      options.error = wrapError(options.error, model, options);
+      options.onError = wrapError(options.error, model, options);
       return (this.sync || Backbone.sync).call(this, 'read', this, options);
     },
 
@@ -298,11 +298,11 @@ var rightJS_window = $(window);
       if (attrs && !this.set(attrs, options)) return false;
       var model = this;
       var success = options.success;
-      options.success = function(resp, status, xhr) {
-        if (!model.set(model.parse(resp, xhr), options)) return false;
+      options.onSuccess = function(resp, status, xhr) {
+        if (!model.set(model.parse(resp.responseJSON, xhr), options)) return false;
         if (success) success(model, resp, xhr);
       };
-      options.error = wrapError(options.error, model, options);
+      options.onError = wrapError(options.error, model, options);
       var method = this.isNew() ? 'create' : 'update';
       return (this.sync || Backbone.sync).call(this, method, this, options);
     },
@@ -526,6 +526,7 @@ var rightJS_window = $(window);
       options || (options = {});
       var collection = this;
       var success = options.success;
+
       options.onSuccess = function(resp, status, xhr) {
         collection[options.add ? 'add' : 'reset'](collection.parse(resp.responseJSON, xhr), options);
         if (success) success(collection, resp);
@@ -909,9 +910,10 @@ var rightJS_window = $(window);
   // Element lookup, scoped to DOM elements within the current view.
   // This should be prefered to global lookups, if you're dealing with
   // a specific view.
-  var selectorDelegate = function(selector) {
+  /*var selectorDelegate = function(selector) {
+    console.log('sd',selector)
     return $(selector, this.el);
-  };
+  };*/
 
   // Cached regex to split keys for `delegate`.
   var eventSplitter = /^(\S+)\s*(.*)$/;
@@ -926,7 +928,7 @@ var rightJS_window = $(window);
     tagName: 'div',
 
     // Attach the `selectorDelegate` function as the `$` property.
-    $: selectorDelegate,
+    //$: selectorDelegate,
 
     // Initialize is an empty function by default. Override it with your own
     // initialization logic.
@@ -952,8 +954,8 @@ var rightJS_window = $(window);
     //     var el = this.make('li', {'class': 'row'}, this.model.escape('title'));
     //
     make: function(tagName, attributes, content) {
-      var el = document.createElement(tagName);
-      if (attributes) $(el).attr(attributes);
+      var el = $E(tagName);
+      if (attributes) $(el).set(attributes);
       if (content) $(el).html(content);
       return el;
     },
@@ -975,22 +977,55 @@ var rightJS_window = $(window);
     delegateEvents: function(events) {
       if (!(events || (events = this.events))) return;
       if (_.isFunction(events)) events = events.call(this);
-      $(this.el).unbind('.delegateEvents' + this.cid);
+      //$(this.el).unbind('.delegateEvents' + this.cid);
+      //console.log('events',events)
+      //console.log(this.el.children())
+      //console.log('children',RightJS.$(this.el))
+      //$(this.el).stopObserving('.delegateEvents' + this.cid);
+      var result = [];
+      //console.log(events.match(eventSplitter))
       for (var key in events) {
+        //console.log('keybefore',key)
+        result += ' _ ' + key + ' ' + this[events[key]];
         var method = this[events[key]];
+        //console.log('method',method)
+        ///console.log(result)
         if (!method) throw new Error('Event "' + events[key] + '" does not exist');
         var match = key.match(eventSplitter);
+        //console.log('key',key)
         var eventName = match[1],
             selector = match[2];
-        method = _.bind(method, this);
+        //method = _.bind(method, this);
         eventName += '.delegateEvents' + this.cid;
+        //console.log('eventname',eventName);
+        //console.log('match',match[1],match[2])
+        //console.log('method2',method)
         if (selector === '') {
-          $(this.el).bind(eventName, method);
+          //$(this.el).bind(eventName, method);
+          $(this.el).on(eventName, method);
         } else {
           /*
            *change this!!!!
            */
-          $(this.el).delegate(selector, eventName, method);
+           //console.log(result)
+           //console.log('special',RightJS.$(selector),selector,this)
+           //console.log('this',this)
+           //console.log('after', this.el, RightJS.$(this.el))
+           console.log('mainelem', $(this.el));
+           console.log('elem', match[2]);
+           console.log('triggered event',method);
+           console.log('eventh',match[1])
+           //console.log('final',match[1],method, match[2])
+          //$(selector).on(eventName,method)
+          //RightJS.$(this.el).on(match[1],method)
+          //var selectort = RightJS.$(match[2]);
+          var selectort = match[2];
+          console.log(selectort)
+          /*$('displayDeals').delegate(match[1], {
+            selectort : method
+          });*/
+          //selectort.on(match[1], method);
+          //$(this.el).delegate(match[1], match[2], method);
         }
       }
     },
@@ -1018,7 +1053,7 @@ var rightJS_window = $(window);
         if (this.className) attrs['class'] = this.className;
         this.el = this.make(this.tagName, attrs);
       } else if (_.isString(this.el)) {
-        this.el = $(this.el).get(0);
+        this.el = RightJS.$(this.el);
       }
     }
 
@@ -1062,28 +1097,11 @@ var rightJS_window = $(window);
   // it difficult to read the body of `PUT` requests.
   Backbone.sync = function(method, model, options) {
     var type = methodMap[method];
-
     // Default JSON-request options.
     var params = _.extend({
-      method: type,
-      dataType: 'json'
+      method : type,
+      jsonp  : options.jsonp || false
     }, options);
-
-    var params2 = _.extend({
-      method: type
-    }, options);
-
-    var rightoptions = {
-        method : type,
-        onSuccess : function(data){
-          //console.log(data.responseJSON);
-          return data.responseJSON;
-        },
-        onFailure : function(data){
-          console.log('failure',data)
-        }
-    };
-
     // Ensure that we have a URL.
     if (!params.url) {
       params.url = getUrl(model) || urlError();
@@ -1120,11 +1138,8 @@ var rightJS_window = $(window);
       params.processData = false;
     }
     // Make the request.
-    /*
-     * change this!!!
-     */
-    return Xhr.load(params.url,params2);
-    //return $.ajax(params);
+
+    return Xhr.load(params.url,params);
   };
 
   // Helpers
